@@ -21,12 +21,16 @@ v0 = field2vector(u0,N,symm);  % initial state vector
 [V,t_vec] = KSE_integrate(v0,t_study,dt,dt_store,L,N,symm);
 
 %% computing equilibria
-snapshots = [0,0,0,0,0,0];     % Modify the set of snapshot numbers. Do NOT
+snapshots = [2,111,555,666,1705,2222];     % Modify the set of snapshot numbers. Do NOT
                                % use the rand or randi command to select
                                % snapshots from the trajectory; choose six 
                                % arbitrary numbers yourself. 
-
-%%% to be completed
+vb = zeros(size(V,1), length(snapshots));
+flg = zeros(length(snapshots));
+for i=1:length(snapshots)
+    Veq = V(:, snapshots(i));
+    [vb(i), flg(i)] = search4EQ(Veq, T_eqb, dt, L, N, symm);
+end
 
 %% computing UPOs
 %%% to be completed

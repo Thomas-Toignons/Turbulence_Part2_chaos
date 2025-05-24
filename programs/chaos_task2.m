@@ -25,21 +25,30 @@ end
 X = zeros(N_exp,N_norm);       % allocate matrix of Lyapunov exp. history
 t = zeros(N_norm,1);           % allocate vector of normalization instances
 
+
+%%
 figure
 for i = 1:N_norm
-    J = Jacobian(v0,tau,epsilon,dt,L,N,symm);
+    J = Jacobian(v0,tau,epsilon,dt,L,N,symm); % compute Jacobian matrix
     
-    %%% to be completed
-    
-    [v0,~] = KSE_integrate(v0,tau,dt,0,L,N,symm);
+    %---To complete---
+    V = J*Q; % map deviation vector
+    [Q,R] = qr(V, 0); % QR decomposition
+    X(:,i) = X(:,i) + log(abs(diag(R))); % update X
+    %---To complete---
+
+    [v0,~] = KSE_integrate(v0,tau,dt,0,L,N,symm); % evolve the orbit and update v0
     t(i) = i*tau;
+
+
     
     if(rem(i,20)==0)           % update figure every 20 re-normalizations
         clf; grid on; hold on
         for q = 1:N_exp
-            plot(t(1:i),X(q,1:i),'LineWidth',2)
+            plot(t(1:i),X(q,1:i)./(N_norm*tau),'LineWidth',2)
         end
         xlabel('t'); ylabel('\chi_i')
+        legend(compose('\\chi_{%d}', 1:N_exp))%%
         drawnow
     end
 end

@@ -11,18 +11,60 @@ dt = 0.1;                      % time step size for time integration
 dt_store = 1.0;                % time intervals of storing a snapshot
 epsilon = 1e-2;                % relative ampliture of perturbation
 
-%% initial condition
+%% Step 1: initial condition
 [x,~] = domain(L,N);           % construct the spatial domain
 u0 = sin(2.0*pi*x/L);          % initial condition in physical state
 v0 = field2vector(u0,N,symm);  % initial state vector
 
-%% transient time integration
+% transient time integration
 [v1000,~] = KSE_integrate(v0,T_trans,dt,0,L,N,symm);
 
-%% perturbing the state vector
-r = zeros(size(v1000));        % the perturbation vector memory allocation
-for k = 1:length(r)
-    %%% to be completed
+%% Step 2: Advance step v1000 for 250 time units
+[v1,t] = KSE_integrate(v1000, T_study, dt, dt_store, L, N, symm);
+
+u1 = zeros([64,250]);
+for i=1:size(v1,2)
+    u1(:,i) = vector2field(v1(:,i),N,symm);
 end
 
-%%% to be completed
+%% Step 3: Perturb v1000 and advance for 250 times units
+eta = rand(size(v1000));
+r = epsilon * (2*eta - 1) .* v1000;
+
+v_perturbed = v1000 + r;
+
+% Advance v_perturbed for 250 time units
+[v2,~] = KSE_integrate(v_perturbed,T_study,dt,dt_store,L,N,symm);
+
+u2 = zeros([64,250]);
+for i=1:size(v1,2)
+    u2(:,i) = vector2field(v2(:,i),N,symm);
+end
+
+%% Step 4: Compute difference
+diff = abs(u1 - u2);
+
+%% Plots for steps 2, 3, 4
+figure('Name','A');
+subplot(1,3,1);
+contourf(x,t,u1',2);
+colorbar;
+title('$u_1(x,t)$', Interpreter='latex');
+xlabel('$x~\mathrm{[m]}$', Interpreter='latex')
+ylabel('$t~\mathrm{[s]}$', Interpreter='latex')
+
+subplot(1,3,2);
+contourf(x,t,u2',2);
+colorbar;
+title('$u_2(x,t)$', Interpreter='latex');
+xlabel('$x~\mathrm{[m]}$', Interpreter='latex')
+ylabel('$t~\mathrm{[s]}$', Interpreter='latex')
+
+subplot(1,3,3);
+contourf(x,t,diff',2);
+colorbar;
+title('$|u_1 - u_2|(x,t)$', Interpreter='latex');
+xlabel('$x~\mathrm{[m]}$', Interpreter='latex')
+ylabel('$t~\mathrm{[s]}$', Interpreter='latex')
+
+exportgraphics(gcf, '../figures/contour.png',Resolution=600)
