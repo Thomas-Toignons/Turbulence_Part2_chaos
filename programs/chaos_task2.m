@@ -34,7 +34,12 @@ for i = 1:N_norm
     %---To complete---
     V = J*Q; % map deviation vector
     [Q,R] = qr(V, 0); % QR decomposition
-    X(:,i) = X(:,i) + log(abs(diag(R))); % update X
+
+    if i==1
+        X(:,i) = log(abs(diag(R))); % update X
+    else
+        X(:,i) = X(:,i-1) + log(abs(diag(R))); % update X
+    end
     %---To complete---
 
     [v0,~] = KSE_integrate(v0,tau,dt,0,L,N,symm); % evolve the orbit and update v0
@@ -45,10 +50,13 @@ for i = 1:N_norm
     if(rem(i,20)==0)           % update figure every 20 re-normalizations
         clf; grid on; hold on
         for q = 1:N_exp
-            plot(t(1:i),X(q,1:i)./(N_norm*tau),'LineWidth',2)
+            plot(t(1:i),X(q,1:i)./(tau*(1:i)),'LineWidth',2)
         end
-        xlabel('t'); ylabel('\chi_i')
+        xlabel('Iteration', Interpreter='latex'); ylabel('\chi_i')
         legend(compose('\\chi_{%d}', 1:N_exp))%%
         drawnow
     end
 end
+exportgraphics(gcf,"../figures/lyapunov.png", Resolution=600)
+%%
+chi = X(:, N_norm)/(tau*N_norm)

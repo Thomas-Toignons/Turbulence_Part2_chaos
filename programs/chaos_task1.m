@@ -47,24 +47,47 @@ diff = abs(u1 - u2);
 %% Plots for steps 2, 3, 4
 figure('Name','A');
 subplot(1,3,1);
-contourf(x,t,u1',2);
-colorbar;
+imagesc(u1')
+c = colorbar;
 title('$u_1(x,t)$', Interpreter='latex');
-xlabel('$x~\mathrm{[m]}$', Interpreter='latex')
-ylabel('$t~\mathrm{[s]}$', Interpreter='latex')
+xlabel('$x$', Interpreter='latex')
+ylabel('$t$', Interpreter='latex')
+set(gca,'YDir','normal')
 
 subplot(1,3,2);
-contourf(x,t,u2',2);
-colorbar;
+imagesc(u2')
+c = colorbar;
 title('$u_2(x,t)$', Interpreter='latex');
-xlabel('$x~\mathrm{[m]}$', Interpreter='latex')
-ylabel('$t~\mathrm{[s]}$', Interpreter='latex')
+xlabel('$x$', Interpreter='latex')
+ylabel('$t$', Interpreter='latex')
+set(gca,'YDir','normal')
 
 subplot(1,3,3);
-contourf(x,t,diff',2);
-colorbar;
-title('$|u_1 - u_2|(x,t)$', Interpreter='latex');
-xlabel('$x~\mathrm{[m]}$', Interpreter='latex')
-ylabel('$t~\mathrm{[s]}$', Interpreter='latex')
+imagesc(log10(diff'))
+c = colorbar;
+title('log10($|u_1 - u_2|)(x,t)$', Interpreter='latex');
+xlabel('$x$', Interpreter='latex')
+ylabel('$t$', Interpreter='latex')
+set(gca,'YDir','normal')
 
 exportgraphics(gcf, '../figures/contour.png',Resolution=600)
+
+
+%%
+% Compute initial pointwise difference
+initial_diff = abs(u1(:,1) - u2(:,1));   % shape: [64 x 1]
+
+% Create mask: for each (x,t), check if diff >= e * initial_diff(x)
+mask = zeros(size(diff));               % shape: [64 x 250]
+for i = 1:size(diff,1)
+    mask(i,:) = diff(i,:) >= exp(1) * initial_diff(i);
+end
+
+% Plot mask
+figure('Name','Lyapunov Time Mask');
+imagesc(mask')
+set(gca, 'YDir', 'normal')
+xlabel('$x$', 'Interpreter', 'latex')
+ylabel('$t$', 'Interpreter', 'latex')
+title('$|u_1 - u_2| \geq e \cdot |u_1(x,0) - u_2(x,0)|$', 'Interpreter', 'latex')
+colorbar;
