@@ -27,6 +27,8 @@ t = zeros(N_norm,1);           % allocate vector of normalization instances
 
 
 %%
+linestyles = {'-',':'};
+
 figure
 for i = 1:N_norm
     J = Jacobian(v0,tau,epsilon,dt,L,N,symm); % compute Jacobian matrix
@@ -50,7 +52,9 @@ for i = 1:N_norm
     if(rem(i,20)==0)           % update figure every 20 re-normalizations
         clf; grid on; hold on
         for q = 1:N_exp
-            plot(t(1:i),X(q,1:i)./(tau*(1:i)),'LineWidth',2)
+            idx = mod(q,2)+1;
+            plot(t(1:i),X(q,1:i)./(tau*(1:i)),'LineWidth',2, ...
+                Linestyle=linestyles{idx})
         end
         xlabel('Iteration', Interpreter='latex'); ylabel('\chi_i')
         legend(compose('\\chi_{%d}', 1:N_exp))%%

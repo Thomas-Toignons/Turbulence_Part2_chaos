@@ -1,5 +1,6 @@
 close all; clear; clc
 
+set(0, 'DefaultAxesFontSize', 18); % Set default font size for axes
 %% inputs
 addpath('../functions/')       % folder containing functions
 L = 38.6;                      % domain length
@@ -41,8 +42,11 @@ for i=1:length(snapshots)
     
     subplot(3,2,i)
     hold on
-    plot(u_guess, 'DisplayName','Initial guess', linewidth=1.5)
-    plot(u_eq, 'DisplayName','Equilibrium', 'LineStyle','--', LineWidth=1.5)
+    plot(u_guess, 'DisplayName','Initial guess', LineWidth=1.5, LineStyle='--')
+
+    if (params(i).flag) == 1
+        plot(u_eq, 'DisplayName','Equilibrium', LineWidth=1.5)
+    end
     title(['$t=$' num2str(params(i).t) ' s'], 'Interpreter','latex')
     xlabel('$x$', 'Interpreter','latex')
     ylabel('$u(x)$', 'Interpreter','latex')
@@ -60,25 +64,24 @@ end
 
 
 %% SIN INITIAL GUESSES
-flg = zeros(1, 6);
-V_eq = zeros(21, 6);
+clear params
 
 figure('Name','D');
 for k=1:6
+    params(k).k = k;
     u0 = sin(k* (2*pi*x)/L);
     V_guess = field2vector(u0,N,symm);
-    [V_eq(:,k), flg(k)] = search4EQ(V_guess, T_eqb, dt, L, N, symm);
-
-
+    [params(k).V_eq, params(k).flag] = search4EQ(V_guess, T_eqb, dt, L, N, symm);
+    
     u_guess = vector2field(V_guess,N,symm);
-    u_eq = vector2field(V_eq(:,k),N,symm);
+    u_eq = vector2field(params(k).V_eq,N,symm);
 
     subplot(3,2,k)
     hold on
-    plot(u_guess, 'DisplayName','Initial guess', linewidth=1.5)
+    plot(u_guess, 'DisplayName','Initial guess', 'LineStyle','--', linewidth=1.5)
 
-    if flg(k)~=0
-        plot(u_eq, 'DisplayName','Equilibrium', 'LineStyle','--', LineWidth=1.5)
+    if (params(k).flag) == 1
+        plot(u_eq, 'DisplayName','Equilibrium', LineWidth=1.5)
     end
 
     title(['$\sin($' num2str(k) '$\cdot \frac{2 \pi x}{L})$'], 'Interpreter','latex')
@@ -88,27 +91,42 @@ end
 legend()
 exportgraphics(gcf,'../figures/sines.png', Resolution=600)
 
+
+[E,P,D] = projection([params.V_eq],N,L,symm);
+for i=1:length(snapshots)
+    params(i).E = E(i);
+    params(i).P = P(i);
+    params(i).D = D(i);
+end
+
+
 %% Plot the chaotic attractor
-[vv,tt] = KSE_integrate(v0,t_study,dt,0.1,L,N,symm); % integrated state vector for the chaotic attractor plot, dt_store is lower to have smoother curves
+[vv,tt] = KSE_integrate(v0,t_study,dt,dt_store,L,N,symm); % integrated state vector for the chaotic attractor plot, dt_store is lower to have smoother curves
 [E,P,D] = projection(vv,N,L,symm);
 
 figure(Name='E');
-plot3(E,P,D,'Color',[0,0,0,0.25]) % Chaotic attractor visualization
+plot3(E,P,D,'Color',[0,0,0,0.25], DisplayName='Attractor') % Chaotic attractor visualization
+hold on
 
-hold on;
+plot3([params.E], [params.P], [params.D],'r', DisplayName='Equilibria from sines',...
+    LineStyle='none', Marker='.', MarkerSize=30); % E,D,P visualization
 
-[E,P,D]=projection(V_eq,N,L,symm);
-plot3(E, P, D,'r', LineStyle='none', Marker='.', MarkerSize=20); % E,D,P visualization
+plot3(31.17, 40.32, 40.32, 'g', DisplayName='Equilibria from snapshots', ...
+    LineStyle='none', Marker='.', MarkerSize=30); % Add manually the 'missing' equilibrium point
+
+
 
 xlabel('Energy $E$', Interpreter='latex');
 ylabel('Production $P$', Interpreter='latex');
 zlabel('Dissipation $D$', Interpreter='latex');
-title('Chaotic attractor of the KSE');
 grid on;
+legend();
 exportgraphics(gcf, '../figures/attractor.png', 'Resolution',600)
 
 %% computing UPOs
 clc; clear
+set(0, 'DefaultAxesFontSize', 18); % Set default font size for axes
+
 
 % inputs
 addpath('../functions/')       % folder containing functions
@@ -165,15 +183,8 @@ for i=1:5
     params(i).name = i;
 end
 
-%%
-
-
-ts = [189, 529, 1113, 2087, 1366];
-T_guesses = [37, 58, 74, 85, 105];
-V_UPO = zeros(21, length(ts));
-T_UPO = zeros(1, length(ts));
-flags = zeros(1, length(ts));
-
+ts = [189, 529, 1113, 2087, 2004];
+T_guesses = [37, 58, 74, 85, 109];
 
 for i=1:length(ts)
     t = ts(i);
@@ -184,24 +195,22 @@ for i=1:length(ts)
 
     V_guess = V(:,(t+1)); %the index corresponding the the t-value is t+1
 
-    [V_UPO(:,i), T_UPO(i), flags(i)] = search4PO(V_guess,T_guess,dt,L,N,symm);
+    [V_UPO, T_UPO, flags] = search4PO(V_guess,T_guess,dt,L,N,symm);
     
-    params(i).flag = flags(i);
-    params(i).T_UPO = T_UPO(i);
-    params(i).V_UPO = V_UPO(:,i);
+    params(i).flag = flags;
+    params(i).T_UPO = T_UPO;
+    params(i).V_UPO = V_UPO;
     
 end
 
 % Determine stability of computed UPOs
-floquets = zeros(1, length(ts));
 
 for i=1:length(T_guesses)
     V_p = V(:,i);
-    T_conv = T_UPO(i);
-    JvT = Jacobian(V_p,T_conv,epsilon,dt,L,N,symm);
-    floquets(i) = max(abs(eig(JvT)));
 
-    params(i).floquet = floquets(i);
+    JvT = Jacobian(V_p,params(i).T_UPO,epsilon,dt,L,N,symm);
+
+    params(i).floquet = max(abs(eig(JvT)));
 
     params(i).tf = params(i).T_UPO / params(i).floquet;
     
@@ -209,26 +218,51 @@ end
 
 %% Plot the orbits
 [Vc,~] = KSE_integrate(v0,t_study,dt,dt_store,L,N,symm);
-[E,D,P] = projection(Vc, N, L, symm);
+[E,P,D] = projection(Vc, N, L, symm);
 
 figure('Name','G')
-plot3(E,D,P,'Color',[0,0,0,0.25]) % Chaotic attractor visualization
+plot3(E,P,D,'Color',[0,0,0,0.25], DisplayName='Attractor') % Chaotic attractor visualization
 hold on;
 for i=1:length(ts)
     V = params(i).V_UPO;
     T = params(i).T_UPO;
-
-    v = KSE_integrate(V,T,dt,0.1,L,N,symm);
-
-    [E,D,P] = projection(v,N,L,symm);
-    plot3(E,D,P, linewidth=2)
+    
+    if params(i).flag == 1
+        v = KSE_integrate(V,T,dt,0.1,L,N,symm);
+        [E,P,D] = projection(v,N,L,symm);
+        plot3(E,P,D, linewidth=2, DisplayName=['UPO ' num2str(i)])
+    end
 
 end
 xlabel('Energy $E$', Interpreter='latex');
 ylabel('Production $P$', Interpreter='latex');
 zlabel('Dissipation $D$', Interpreter='latex');
-legend({'KSE attractor', 'UPO 1', 'UPO 2', 'UPO 3', 'UPO 4', 'UPO 5'})
+legend()
 grid on;
 exportgraphics(gcf, '../figures/UPOs.png', Resolution=600);
 
-close all;
+% close all;
+
+%% Plot each orbit individually
+figure('Name','Individual Orbits');
+hold on;
+k = 1;
+for i=1:length(ts)
+    V = params(i).V_UPO;
+    T = params(i).T_UPO;
+
+    if params(i).flag == 1
+        subplot(2,2,k)
+        v = KSE_integrate(V,T,dt,0.1,L,N,symm);
+        [E,P,D] = projection(v,N,L,symm);
+        plot3(E,P,D, linewidth=2)
+        
+        title(['$T_{UPO} = $' num2str(params(i).T_UPO)], Interpreter="latex")
+        xlabel('Energy $E$', Interpreter='latex');
+        ylabel('Production $P$', Interpreter='latex');
+        zlabel('Dissipation $D$', Interpreter='latex');
+
+        k = k+1;
+    end
+end
+exportgraphics(gcf,'../figures/individual_orbits.png', Resolution=600)
