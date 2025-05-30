@@ -212,7 +212,7 @@ for i=1:length(T_guesses)
 
     params(i).floquet = max(abs(eig(JvT)));
 
-    params(i).tf = params(i).T_UPO / params(i).floquet;
+    params(i).tf = params(i).T_UPO / log(params(i).floquet);
     
 end
 
